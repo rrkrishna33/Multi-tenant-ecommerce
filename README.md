@@ -208,6 +208,23 @@ notice that waited out a 5-minute cache window would be useless.
 Colour fields are validated as hex literals — they are injected into a `<style>`
 block on the public storefront, so anything else is a CSS injection.
 
+## Why checkout ends in a full page load
+
+`submitOrder` returns the new order's id and the client navigates with
+`window.location.assign`. It deliberately does **not** call `redirect()`.
+
+Every page here is reached through a middleware host rewrite, and a redirect out
+of a server action is followed by the client router, not the browser: it fetches
+the estimate as a flight request whose router state tree was built for the
+rewritten path. That combination intermittently rendered "page not found" on an
+estimate that had just been created — a page that loads perfectly on refresh,
+which is exactly what customers reported.
+
+A full navigation makes this hop identical to that refresh. It costs one page
+load on the single most important transition in the app. The action's response
+also renders a plain "Open your estimate" link, so the order is reachable even
+if the navigation never runs.
+
 ## The About block
 
 `/admin/settings` has an **About your shop** section — headline, about text,

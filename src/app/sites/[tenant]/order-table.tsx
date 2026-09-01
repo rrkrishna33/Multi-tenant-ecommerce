@@ -68,6 +68,13 @@ export function OrderTable({ products, minOrderValue, upiId }: Props) {
     if (state.error) setCheckoutOpen(true);
   }, [state.error]);
 
+  // A full navigation, not a router push: see the comment on submitOrder. The
+  // order is already saved at this point, so the worst case if this does not
+  // run is the link rendered below.
+  useEffect(() => {
+    if (state.orderId) window.location.assign(`/order/${state.orderId}`);
+  }, [state.orderId]);
+
   function setQty(id: string, raw: string) {
     const n = raw === "" ? 0 : Math.max(0, Math.min(9999, Math.floor(Number(raw))));
     setQuantities((q) => ({ ...q, [id]: Number.isFinite(n) ? n : 0 }));
@@ -245,8 +252,26 @@ export function OrderTable({ products, minOrderValue, upiId }: Props) {
               the shop to confirm your order.
             </p>
 
-            <button className="btn" type="submit" disabled={pending || !meetsMinimum}>
-              {pending ? "Placing order..." : "Get estimate"}
+            {/* Rendered by the server action's own response, so a customer
+                whose JavaScript never loaded still reaches their estimate. */}
+            {state.orderId ? (
+              <div className="notice ok">
+                <strong>Your order is saved.</strong>{" "}
+                <a href={`/order/${state.orderId}`}>Open your estimate</a> if this page
+                does not move on its own.
+              </div>
+            ) : null}
+
+            <button
+              className="btn"
+              type="submit"
+              disabled={pending || Boolean(state.orderId) || !meetsMinimum}
+            >
+              {pending
+                ? "Placing order..."
+                : state.orderId
+                  ? "Opening your estimate..."
+                  : "Get estimate"}
             </button>
             {!meetsMinimum ? (
               <p className="muted" style={{ marginTop: 8 }}>
