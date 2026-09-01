@@ -1,0 +1,10 @@
+
+*.tsbuildinfo
+.env
+.env.local
+.next
+.next-dev
+.next-test
+next-env.d.ts
+node_modules
+var/

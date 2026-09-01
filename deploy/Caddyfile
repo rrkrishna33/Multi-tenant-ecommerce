@@ -1,0 +1,93 @@
+# Caddy configuration for the crackers platform.
+#
+# The important piece is on-demand TLS: it lets a client buy a domain, point an
+# A record at this VPS, and get working HTTPS with no action from us. That is
+# the whole "client only buys the domain" promise, and it is about ten lines.
+
+{
+	email you@example.com
+
+	on_demand_tls {
+		# Caddy asks this endpoint before issuing a certificate for any domain
+		# it has not seen before. A 2xx authorises issuance.
+		#
+		# This is NOT optional. Without it, anyone who points a DNS record at
+		# this server's IP makes us request a certificate on their behalf --
+		# which burns the Let's Encrypt rate limit (50 certificates per
+		# registered domain per week) and turns the box into a cert mill.
+		ask http://127.0.0.1:3000/api/internal/domain-check
+
+		# Cap issuance so a misconfigured or hostile DNS record cannot trigger
+		# unbounded certificate requests.
+		interval 2m
+		burst 5
+	}
+}
+
+# The platform's own domain and every tenant subdomain.
+# Uses a wildcard cert so new tenant subdomains need no issuance at all.
+yourplatform.com, *.yourplatform.com {
+	# Product images are written to disk by the app and never change (each
+	# upload gets a fresh UUID filename), so Caddy serves them directly.
+	# Keeping them off the Node process is what stops a Diwali storefront
+	# spending its event loop on thumbnails.
+	handle_path /uploads/* {
+		root * /var/lib/crackers/uploads
+		file_server
+		header Cache-Control "public, max-age=31536000, immutable"
+		header X-Content-Type-Options "nosniff"
+		# Never let a stored file be interpreted as markup.
+		header Content-Disposition "inline"
+	}
+
+	reverse_proxy 127.0.0.1:3000
+
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+}
+
+# Every client custom domain. The empty https:// matcher accepts any hostname,
+# with the `ask` endpoint above deciding which ones are legitimate.
+https:// {
+	tls {
+		on_demand
+	}
+
+	# Product images are written to disk by the app and never change (each
+	# upload gets a fresh UUID filename), so Caddy serves them directly.
+	# Keeping them off the Node process is what stops a Diwali storefront
+	# spending its event loop on thumbnails.
+	handle_path /uploads/* {
+		root * /var/lib/crackers/uploads
+		file_server
+		header Cache-Control "public, max-age=31536000, immutable"
+		header X-Content-Type-Options "nosniff"
+		# Never let a stored file be interpreted as markup.
+		header Content-Disposition "inline"
+	}
+
+	reverse_proxy 127.0.0.1:3000
+
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	# Next.js hashes static asset filenames, so they are safe to cache hard.
+	# This matters in October, when it is the difference between serving
+	# thumbnails from disk and serving them from Node.
+	@static path /_next/static/*
+	header @static Cache-Control "public, max-age=31536000, immutable"
+}
