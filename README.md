@@ -151,6 +151,22 @@ present in the server-rendered HTML and still works if the page's JavaScript
 has not loaded — on a shop's phone, on rural mobile data in October, that is
 not hypothetical.
 
+### A sample price list
+
+```bash
+npm run sample-catalogue -- <slug>            # default: rvcrackers
+npm run sample-catalogue -- <slug> --clear    # wipe the shop's catalogue first
+```
+
+63 products across 12 categories in the order every Sivakasi list uses — one
+sound crackers through to gift boxes — with Tamil names, SKUs, pieces per unit
+and 50-82% discounts. It is what a new shop or a demo needs before the owner has
+their own CSV.
+
+Safe to re-run: products are matched by SKU and existing ones are left alone.
+Inserts go through `withTenant()`, so RLS applies to the script exactly as it
+does to the app.
+
 ## Shop settings
 
 `/admin/settings` lets the owner change what was previously fixed at tenant
