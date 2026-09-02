@@ -319,10 +319,17 @@ look nothing like their cause.
 ```bash
 npm install
 createdb crackers
-DATABASE_URL=postgres://postgres:pw@localhost:5432/crackers npm run db:setup
-DATABASE_URL=postgres://postgres:pw@localhost:5432/crackers npm run seed
+cp .env.example .env      # then fill it in; every variable is documented there
+npm run db:setup          # creates crackers_app + crackers_platform, applies RLS
+npm run seed
 npm run dev
 ```
+
+`db:setup` and `seed` connect as `SUPERUSER_DATABASE_URL`; everything else uses
+`DATABASE_URL`, which must stay `crackers_app`. Every script loads `.env`
+itself, so no connection string ever has to be pasted on the command line -- and
+`DATABASE_URL` never has to be temporarily pointed at `postgres`, which is easy
+to do and easy to forget to undo.
 
 Then visit `http://anil-crackers.localhost:3000` (Chrome and Firefox resolve
 `*.localhost` automatically). Admin sign-in is at `/login` —
