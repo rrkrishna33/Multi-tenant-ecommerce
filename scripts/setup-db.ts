@@ -78,6 +78,28 @@ async function main() {
         : "disabled";
       console.log(`  ${r.tablename.padEnd(16)} ${state}`);
     }
+    // The roles matter as much as the policies: PLATFORM_DATABASE_URL can be
+    // set perfectly and still point at a role that cannot bypass RLS, in which
+    // case sign-in silently finds no user and nobody can log in.
+    const roles = await client.query(`
+      select rolname, rolcanlogin, rolbypassrls
+      from pg_roles
+      where rolname in ('crackers_app', 'crackers_platform')
+      order by rolname
+    `);
+
+    console.log("\nRoles:");
+    for (const r of roles.rows) {
+      const expected = r.rolname === "crackers_platform";
+      const mark = r.rolbypassrls === expected ? "ok" : "WRONG";
+      console.log(
+        `  ${r.rolname.padEnd(18)} login=${r.rolcanlogin} bypassrls=${r.rolbypassrls}  ${mark}`,
+      );
+    }
+    if (roles.rows.length < 2) {
+      console.log("  (a role is missing -- rls.sql should have created both)");
+    }
+
     console.log("\nSetup complete. `tenants` is intentionally not protected.");
   } finally {
     await client.end();

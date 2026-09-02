@@ -52,6 +52,11 @@ BEGIN
   END IF;
 END $$;
 
+-- Applied unconditionally, not only on creation: a role that already existed
+-- with different attributes would otherwise keep them forever, and this script
+-- would report success while the setup it describes was never true.
+ALTER ROLE crackers_app WITH LOGIN NOBYPASSRLS;
+
 GRANT USAGE ON SCHEMA public TO crackers_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO crackers_app;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO crackers_app;
@@ -68,6 +73,12 @@ BEGIN
     CREATE ROLE crackers_platform LOGIN BYPASSRLS;
   END IF;
 END $$;
+
+-- Same reason, and it matters more here: a crackers_platform created earlier
+-- WITHOUT BYPASSRLS leaves PLATFORM_DATABASE_URL correctly set and pointing at
+-- a role that cannot do the one thing it exists for, so sign-in finds no user
+-- and every login fails.
+ALTER ROLE crackers_platform WITH LOGIN BYPASSRLS;
 
 GRANT USAGE ON SCHEMA public TO crackers_platform;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO crackers_platform;

@@ -51,13 +51,25 @@ let platformPool: pg.Pool | undefined;
  * avoid setting tenant context is how the isolation guarantees get quietly
  * dismantled. It falls back to DATABASE_URL so development works with one
  * connection string, which means in development it is NOT actually bypassing.
+ *
+ * That fallback is silent by design in development and loud in production: as
+ * `crackers_app` this connection is subject to RLS, so sign-in finds no user
+ * and NOBODY CAN LOG IN. The failure looks like bad credentials, not like a
+ * missing environment variable, so it says so at startup instead.
  */
 export function getPlatformDb() {
   if (!platformPool) {
-    const connectionString =
-      env("PLATFORM_DATABASE_URL") ?? env("DATABASE_URL");
+    const configured = env("PLATFORM_DATABASE_URL");
+    const connectionString = configured ?? env("DATABASE_URL");
     if (!connectionString) {
       throw new Error("PLATFORM_DATABASE_URL / DATABASE_URL is not set");
+    }
+    if (!configured && process.env.NODE_ENV === "production") {
+      console.warn(
+        "[crackers] PLATFORM_DATABASE_URL is not set, falling back to DATABASE_URL." +
+          "\n[crackers] That connection is subject to RLS, so sign-in will fail for every user." +
+          "\n[crackers] Set PLATFORM_DATABASE_URL to the crackers_platform (BYPASSRLS) role.",
+      );
     }
     platformPool = new pg.Pool({
       connectionString,
