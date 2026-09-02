@@ -1,11 +1,16 @@
 /**
  * One-shot database setup: applies generated migrations, then the RLS policies.
  *
- * Run as a superuser (the `postgres` role). The application itself connects as
- * the unprivileged `crackers_app` role that rls.sql creates, which is what
- * makes the row-level security policies bite.
+ * Connects as a SUPERUSER, because it creates roles and applies policies. The
+ * application itself connects as the unprivileged `crackers_app` role that
+ * rls.sql creates, which is what makes the row-level security policies bite.
  *
- *   DATABASE_URL=postgres://postgres:pw@localhost:5432/crackers npm run db:setup
+ * It uses SUPERUSER_DATABASE_URL when set, so `.env` can hold both connections
+ * at once and DATABASE_URL never has to be temporarily pointed at `postgres` --
+ * a swap that is easy to make and easy to forget to undo, and leaves the app
+ * running as a role that bypasses every policy.
+ *
+ *   npm run db:setup
  */
 import pg from "pg";
 import { readFileSync, readdirSync } from "node:fs";
@@ -15,10 +20,15 @@ import { fileURLToPath } from "node:url";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 async function main() {
-  const url = process.env.DATABASE_URL;
+  const url = process.env.SUPERUSER_DATABASE_URL ?? process.env.DATABASE_URL;
   if (!url) {
-    console.error("DATABASE_URL is not set.");
+    console.error("Set SUPERUSER_DATABASE_URL (or DATABASE_URL) to a superuser connection.");
     process.exit(1);
+  }
+  if (!process.env.SUPERUSER_DATABASE_URL) {
+    console.warn(
+      "SUPERUSER_DATABASE_URL is not set; using DATABASE_URL. This only works if that role can create roles.",
+    );
   }
 
   const client = new pg.Client({ connectionString: url });

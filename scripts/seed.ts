@@ -1,7 +1,12 @@
 /**
  * Seeds a demo shop so you can click through the whole flow locally.
  *
- *   DATABASE_URL=... npm run seed
+ * Writes without setting tenant context, so it needs a connection that is not
+ * subject to RLS: SUPERUSER_DATABASE_URL, falling back to DATABASE_URL. As
+ * `crackers_app` every insert here would be refused by the tenant_isolation
+ * policy, which is the policy working correctly.
+ *
+ *   npm run seed
  */
 import pg from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -59,8 +64,8 @@ const CATALOGUE: [string, [string, number, number, string][]][] = [
 ];
 
 async function main() {
-  const url = process.env.DATABASE_URL;
-  if (!url) throw new Error("DATABASE_URL is not set");
+  const url = process.env.SUPERUSER_DATABASE_URL ?? process.env.DATABASE_URL;
+  if (!url) throw new Error("SUPERUSER_DATABASE_URL (or DATABASE_URL) is not set");
 
   const pool = new pg.Pool({ connectionString: url });
   const db = drizzle(pool, { schema });

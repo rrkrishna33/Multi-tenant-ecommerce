@@ -9,14 +9,14 @@
     "start": "next start",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "db:setup": "tsx scripts/setup-db.ts",
+    "db:setup": "tsx --env-file-if-exists=.env scripts/setup-db.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "seed": "tsx scripts/seed.ts",
-    "create-admin": "tsx scripts/create-admin.ts",
-    "reconcile": "tsx scripts/reconcile-status.ts",
-    "sample-catalogue": "tsx --env-file=.env scripts/sample-catalogue.ts"
+    "seed": "tsx --env-file-if-exists=.env scripts/seed.ts",
+    "create-admin": "tsx --env-file-if-exists=.env scripts/create-admin.ts",
+    "reconcile": "tsx --env-file-if-exists=.env scripts/reconcile-status.ts",
+    "sample-catalogue": "tsx --env-file-if-exists=.env scripts/sample-catalogue.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.2.17",
