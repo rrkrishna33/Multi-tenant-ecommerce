@@ -36,17 +36,27 @@ sudo -u postgres createdb crackers
 sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'a-strong-password';"
 ```
 
-Then from the app directory:
+Then, with `.env` in place (step 3 -- `db:setup` reads `SUPERUSER_DATABASE_URL`
+from it):
 
 ```bash
-DATABASE_URL=postgres://postgres:a-strong-password@localhost:5432/crackers \
-  npm run db:setup
+npm run db:setup
 ```
 
-`db:setup` applies the migrations, then `src/db/rls.sql`, and prints the RLS
-status of every table. **Check that output.** Every tenant table must read
-`enabled + forced`; `tenants` is intentionally unprotected because domain
-routing has to resolve a host before any tenant context exists.
+`db:setup` applies the migrations, then `src/db/rls.sql`, and prints what it
+produced. **Check both halves of that output.**
+
+Every tenant table must read `enabled + forced`; `tenants` is intentionally
+unprotected because domain routing has to resolve a host before any tenant
+context exists. And the roles must read:
+
+```
+  crackers_app       login=true bypassrls=false  ok
+  crackers_platform  login=true bypassrls=true   ok
+```
+
+`crackers_platform` without `bypassrls` is the quiet killer: sign-in finds no
+user and every login fails, looking exactly like a wrong password.
 
 Set passwords for the two application roles it created:
 
@@ -67,13 +77,29 @@ git clone <your repo> /opt/crackers && cd /opt/crackers
 npm ci && npm run build
 ```
 
-`/opt/crackers/.env`:
+`/opt/crackers/.env` -- copy `.env.example`, which documents every variable and
+what breaks if it is wrong:
 
 ```
 DATABASE_URL=postgres://crackers_app:app-password@localhost:5432/crackers
+PLATFORM_DATABASE_URL=postgres://crackers_platform:platform-password@localhost:5432/crackers
+SUPERUSER_DATABASE_URL=postgres://postgres:a-strong-password@localhost:5432/crackers
 PLATFORM_DOMAIN=yourplatform.com
 SESSION_SECRET=<64 random hex chars: openssl rand -hex 32>
+SERVER_IP=<your VPS IP>
+UPLOAD_DIR=/var/lib/crackers/uploads
 NODE_ENV=production
+```
+
+**`PLATFORM_DATABASE_URL` is not optional in production.** Left out, the app
+falls back to `DATABASE_URL`, which is subject to RLS, and nobody can sign in --
+shop owners included. It warns about this at startup, in the journal.
+
+Create the upload directory as the user the service runs as:
+
+```bash
+mkdir -p /var/lib/crackers/uploads
+chown -R www-data:www-data /var/lib/crackers/uploads
 ```
 
 `/etc/systemd/system/crackers.service`:
@@ -103,18 +129,54 @@ systemctl enable --now crackers
 ## 4. Caddy
 
 Copy `deploy/Caddyfile` to `/etc/caddy/Caddyfile`, replacing `yourplatform.com`
-and the email address, then `systemctl reload caddy`.
+(two places) and the email address, then `systemctl reload caddy`.
 
-For the wildcard `*.yourplatform.com` certificate you need a DNS challenge,
-which requires a Caddy build with your DNS provider's plugin:
+**DNS.** Three records, all pointing at the VPS:
 
-```bash
-caddy add-package github.com/caddy-dns/cloudflare
+| Type | Name | Value |
+|---|---|---|
+| A | `@` | your VPS IP |
+| A | `www` | your VPS IP |
+| A | `*` | your VPS IP |
+
+The wildcard is what makes a new shop live at `slug.yourplatform.com` the
+moment you create it, with no DNS work per shop.
+
+### Already running nginx?
+
+Caddy needs ports 80 and 443, and only one process can hold them. If nginx is
+already serving other sites on this box, put Caddy in front and move nginx to a
+local port rather than choosing between them:
+
+```nginx
+# /etc/nginx/sites-enabled/*  -- change every `listen 80;` to:
+listen 127.0.0.1:8080;
+# and drop any listen 443 / ssl_certificate lines: Caddy terminates TLS now.
 ```
 
-and a `tls` block with your API token. If you would rather avoid that, drop the
-wildcard and let each tenant subdomain be issued on demand like the custom
-domains — it costs one extra certificate per shop, which is nothing at 20 shops.
+```caddyfile
+# In the Caddyfile, before the https:// block -- your existing sites, by name.
+oldsite.example.com {
+	reverse_proxy 127.0.0.1:8080
+}
+```
+
+Caddy gets certificates for those too, so they end up better off than before.
+
+**Why not keep nginx in front and script certbot?** Because every client domain
+would then need a certbot run and a reload, and a failure is invisible until a
+customer sees a browser security warning on the shop's own domain -- in
+October, on the one week that matters. It is buildable (a cron job reading
+`tenants.custom_domain` and issuing what is missing), but it is rebuilding, less
+reliably, the ten lines of `on_demand_tls` above.
+
+**Certificates.** The config issues one certificate per hostname on demand,
+including tenant subdomains. It deliberately does *not* use a
+`*.yourplatform.com` wildcard certificate: that can only be issued over a
+DNS-01 challenge, which needs a Caddy built with your DNS provider's plugin
+(`caddy add-package github.com/caddy-dns/cloudflare`) and an API token sitting
+on the box. At 5-20 shops the difference is invisible, and it is one less thing
+to hold correct.
 
 ## 5. Your platform admin login
 

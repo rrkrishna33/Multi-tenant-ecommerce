@@ -3,6 +3,9 @@
 # The important piece is on-demand TLS: it lets a client buy a domain, point an
 # A record at this VPS, and get working HTTPS with no action from us. That is
 # the whole "client only buys the domain" promise, and it is about ten lines.
+#
+# Replace yourplatform.com with your own domain in the two places below, and
+# the email address above it.
 
 {
 	email you@example.com
@@ -15,6 +18,9 @@
 		# this server's IP makes us request a certificate on their behalf --
 		# which burns the Let's Encrypt rate limit (50 certificates per
 		# registered domain per week) and turns the box into a cert mill.
+		#
+		# The endpoint approves your own domain, your tenant subdomains, and
+		# any custom domain a shop is actually registered with. Nothing else.
 		ask http://127.0.0.1:3000/api/internal/domain-check
 
 		# Cap issuance so a misconfigured or hostile DNS record cannot trigger
@@ -24,42 +30,8 @@
 	}
 }
 
-# The platform's own domain and every tenant subdomain.
-# Uses a wildcard cert so new tenant subdomains need no issuance at all.
-yourplatform.com, *.yourplatform.com {
-	# Product images are written to disk by the app and never change (each
-	# upload gets a fresh UUID filename), so Caddy serves them directly.
-	# Keeping them off the Node process is what stops a Diwali storefront
-	# spending its event loop on thumbnails.
-	handle_path /uploads/* {
-		root * /var/lib/crackers/uploads
-		file_server
-		header Cache-Control "public, max-age=31536000, immutable"
-		header X-Content-Type-Options "nosniff"
-		# Never let a stored file be interpreted as markup.
-		header Content-Disposition "inline"
-	}
-
-	reverse_proxy 127.0.0.1:3000
-
-	encode zstd gzip
-
-	header {
-		Strict-Transport-Security "max-age=31536000; includeSubDomains"
-		X-Content-Type-Options "nosniff"
-		X-Frame-Options "SAMEORIGIN"
-		Referrer-Policy "strict-origin-when-cross-origin"
-		-Server
-	}
-}
-
-# Every client custom domain. The empty https:// matcher accepts any hostname,
-# with the `ask` endpoint above deciding which ones are legitimate.
-https:// {
-	tls {
-		on_demand
-	}
-
+# Everything every site needs, defined once.
+(site) {
 	# Product images are written to disk by the app and never change (each
 	# upload gets a fresh UUID filename), so Caddy serves them directly.
 	# Keeping them off the Node process is what stops a Diwali storefront
@@ -90,4 +62,28 @@ https:// {
 	# thumbnails from disk and serving them from Node.
 	@static path /_next/static/*
 	header @static Cache-Control "public, max-age=31536000, immutable"
+}
+
+# The platform's own site: marketing, /platform admin, tenant sign-in.
+# Both names are needed -- the app treats the apex and www as the same thing,
+# but Caddy needs a certificate for each.
+yourplatform.com, www.yourplatform.com {
+	import site
+}
+
+# Everything else: tenant subdomains (shop.yourplatform.com) AND client custom
+# domains. The empty https:// matcher accepts any hostname, and the `ask`
+# endpoint above decides which ones get a certificate.
+#
+# Note there is deliberately no *.yourplatform.com block. A wildcard
+# certificate can only be issued over a DNS-01 challenge, which needs a Caddy
+# built with your DNS provider's plugin and an API token on the box. On-demand
+# issues one certificate per subdomain instead, needs neither, and at 5-20
+# shops the difference is invisible.
+https:// {
+	tls {
+		on_demand
+	}
+
+	import site
 }
