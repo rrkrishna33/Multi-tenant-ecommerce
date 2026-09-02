@@ -6,6 +6,7 @@ import { getTenantByKey } from "@/lib/tenant-db";
 import { resolveTenantForHost, isServable, normalizeHost } from "@/lib/tenant";
 import { dbLookup } from "@/lib/tenant-db";
 import { placeOrder, OrderError } from "@/lib/orders";
+import { envOr } from "@/lib/env";
 
 export type CheckoutState = {
   error?: string;
@@ -24,7 +25,7 @@ export type CheckoutState = {
 async function currentTenant() {
   const h = await headers();
   const host = normalizeHost(h.get("host") ?? "");
-  const platformDomain = normalizeHost(process.env.PLATFORM_DOMAIN ?? "localhost:3000");
+  const platformDomain = normalizeHost(envOr("PLATFORM_DOMAIN", "localhost:3000"));
   const tenant = await resolveTenantForHost(host, platformDomain, dbLookup);
   if (!tenant || !isServable(tenant)) return null;
   return tenant;

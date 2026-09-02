@@ -14,6 +14,7 @@ import { eq } from "drizzle-orm";
 import { schema, tenants, users, categories, products } from "../src/db/schema";
 import { hashPassword } from "../src/lib/auth";
 import { parseRupeesToPaise } from "../src/lib/pricing";
+import { env } from "../src/lib/env";
 
 const CATALOGUE: [string, [string, number, number, string][]][] = [
   [
@@ -64,7 +65,7 @@ const CATALOGUE: [string, [string, number, number, string][]][] = [
 ];
 
 async function main() {
-  const url = process.env.SUPERUSER_DATABASE_URL ?? process.env.DATABASE_URL;
+  const url = env("SUPERUSER_DATABASE_URL") ?? env("DATABASE_URL");
   if (!url) throw new Error("SUPERUSER_DATABASE_URL (or DATABASE_URL) is not set");
 
   const pool = new pg.Pool({ connectionString: url });

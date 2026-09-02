@@ -11,9 +11,10 @@ import {
   ProvisioningError,
 } from "@/lib/platform-service";
 import { isPlanId } from "@/lib/subscriptions";
+import { envOr } from "@/lib/env";
 
 function platformDomain() {
-  return process.env.PLATFORM_DOMAIN ?? "localhost:3000";
+  return envOr("PLATFORM_DOMAIN", "localhost:3000");
 }
 
 /** Guards every platform action. Platform admins have no tenant, so the

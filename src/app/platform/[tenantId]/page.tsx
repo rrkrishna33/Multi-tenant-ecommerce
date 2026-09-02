@@ -10,6 +10,7 @@ import { PLANS, planName, daysUntil, GRACE_PERIOD_DAYS } from "@/lib/subscriptio
 import { dnsInstructions } from "@/lib/provisioning";
 import { setStatusAction, renewAction } from "../actions";
 import { DomainForm } from "./domain-form";
+import { envOr } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -29,8 +30,8 @@ export default async function TenantDetailPage({
     getTenantUsers(tenantId),
   ]);
 
-  const platformDomain = process.env.PLATFORM_DOMAIN ?? "localhost:3000";
-  const serverIp = process.env.SERVER_IP ?? "<your VPS IP>";
+  const platformDomain = envOr("PLATFORM_DOMAIN", "localhost:3000");
+  const serverIp = envOr("SERVER_IP", "<your VPS IP>");
   const current = subs.find((s: any) => !s.cancelledAt) ?? null;
   const days = current ? daysUntil(new Date(current.expiresAt), new Date()) : null;
 

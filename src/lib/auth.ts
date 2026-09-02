@@ -5,6 +5,7 @@ import {
   createHmac,
 } from "node:crypto";
 import { promisify } from "node:util";
+import { env } from "./env";
 
 const scrypt = promisify(scryptCb) as (
   password: string | Buffer,
@@ -57,7 +58,7 @@ export type SessionPayload = {
 };
 
 function secret(): string {
-  const s = process.env.SESSION_SECRET;
+  const s = env("SESSION_SECRET");
   if (!s || s.length < 32) {
     throw new Error("SESSION_SECRET must be set to at least 32 characters");
   }

@@ -2,6 +2,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { sql } from "drizzle-orm";
 import pg from "pg";
 import { schema } from "./schema";
+import { env } from "../lib/env";
 
 /**
  * Postgres returns BIGINT/NUMERIC as strings by default, which silently turns
@@ -14,7 +15,7 @@ let pool: pg.Pool | undefined;
 
 export function getPool(): pg.Pool {
   if (!pool) {
-    const connectionString = process.env.DATABASE_URL;
+    const connectionString = env("DATABASE_URL");
     if (!connectionString) {
       throw new Error("DATABASE_URL is not set");
     }
@@ -54,7 +55,7 @@ let platformPool: pg.Pool | undefined;
 export function getPlatformDb() {
   if (!platformPool) {
     const connectionString =
-      process.env.PLATFORM_DATABASE_URL ?? process.env.DATABASE_URL;
+      env("PLATFORM_DATABASE_URL") ?? env("DATABASE_URL");
     if (!connectionString) {
       throw new Error("PLATFORM_DATABASE_URL / DATABASE_URL is not set");
     }

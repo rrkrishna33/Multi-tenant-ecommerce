@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { join, normalize, sep } from "node:path";
+import { env } from "./env";
 
 /**
  * Product image uploads.
@@ -110,7 +111,7 @@ export function publicUrlFor(relativePath: string): string {
 }
 
 export function uploadRoot(): string {
-  return process.env.UPLOAD_DIR ?? join(process.cwd(), "var", "uploads");
+  return env("UPLOAD_DIR") ?? join(process.cwd(), "var", "uploads");
 }
 
 export type ResolvedPath =

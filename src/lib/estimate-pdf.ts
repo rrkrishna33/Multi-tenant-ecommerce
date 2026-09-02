@@ -2,6 +2,7 @@ import PDFDocument from "pdfkit";
 import { existsSync } from "node:fs";
 import { formatInr } from "./pricing";
 import { formatEstimateNumber } from "./orders";
+import { env } from "./env";
 
 /**
  * Server-rendered estimate PDF.
@@ -76,7 +77,7 @@ const BRAND = "#c62828";
  * sign for the same reason: U+20B9 is not in Helvetica's WinAnsi encoding.
  */
 function unicodeFontPath(): string | null {
-  const configured = process.env.PDF_FONT_PATH;
+  const configured = env("PDF_FONT_PATH");
   if (configured && existsSync(configured)) return configured;
   return null;
 }

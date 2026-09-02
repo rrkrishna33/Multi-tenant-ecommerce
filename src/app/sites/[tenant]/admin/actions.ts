@@ -28,11 +28,12 @@ import { subscriptions } from "@/db/schema";
 import { desc, isNull, and, count } from "drizzle-orm";
 import { mkdir, writeFile, unlink } from "node:fs/promises";
 import { join, dirname } from "node:path";
+import { envOr } from "@/lib/env";
 
 async function currentTenantId(): Promise<string | null> {
   const h = await headers();
   const host = normalizeHost(h.get("host") ?? "");
-  const platformDomain = normalizeHost(process.env.PLATFORM_DOMAIN ?? "localhost:3000");
+  const platformDomain = normalizeHost(envOr("PLATFORM_DOMAIN", "localhost:3000"));
   const tenant = await resolveTenantForHost(host, platformDomain, dbLookup);
   return tenant?.id ?? null;
 }

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { dbLookup } from "@/lib/tenant-db";
 import { normalizeHost } from "@/lib/tenant";
+import { envOr } from "@/lib/env";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
   const host = normalizeHost(domain);
 
   // Always allow the platform's own hostnames.
-  const platformDomain = normalizeHost(process.env.PLATFORM_DOMAIN ?? "");
+  const platformDomain = normalizeHost(envOr("PLATFORM_DOMAIN", ""));
   if (platformDomain && (host === platformDomain || host.endsWith(`.${platformDomain}`))) {
     return new NextResponse("ok", { status: 200 });
   }

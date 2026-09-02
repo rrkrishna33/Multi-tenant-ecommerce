@@ -11,9 +11,16 @@ import type { NextConfig } from "next";
  *
  * NEXT_DIST_DIR overrides both, for running a second build alongside a live
  * server.
+ *
+ * Read with `||`, not `??`: a `.env` copied from .env.example carries
+ * `NEXT_DIST_DIR=`, and the empty string is a *set* value as far as `??` is
+ * concerned. That produced `distDir: ""` and a build that failed on a fresh VPS
+ * with an error naming neither the variable nor the file it came from. This
+ * config cannot import from src/, so it repeats what lib/env.ts does for the
+ * rest of the app.
  */
 const distDir =
-  process.env.NEXT_DIST_DIR ??
+  process.env.NEXT_DIST_DIR?.trim() ||
   (process.env.NODE_ENV === "development" ? ".next-dev" : ".next");
 
 const nextConfig: NextConfig = {
@@ -31,6 +38,7 @@ const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
       allowedOrigins: (process.env.SERVER_ACTION_ORIGINS ?? "")
+        .trim()
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean),

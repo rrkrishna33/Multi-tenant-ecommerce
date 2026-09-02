@@ -3,6 +3,7 @@ import { requirePlatformAdmin } from "@/lib/session";
 import { listTenants } from "@/lib/platform-service";
 import { formatInr } from "@/lib/pricing";
 import { PLANS, daysUntil, isPlanId, planName } from "@/lib/subscriptions";
+import { envOr } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,7 @@ export default async function PlatformHome({
         <div className="notice ok">
           Shop <strong>{created}</strong> created. It is live now at{" "}
           <code>
-            {created}.{process.env.PLATFORM_DOMAIN ?? "localhost:3000"}
+            {created}.{envOr("PLATFORM_DOMAIN", "localhost:3000")}
           </code>
           .
         </div>
@@ -79,7 +80,7 @@ export default async function PlatformHome({
                     </a>
                   </td>
                   <td className="muted">
-                    {s.customDomain ?? `${s.slug}.${process.env.PLATFORM_DOMAIN ?? ""}`}
+                    {s.customDomain ?? `${s.slug}.${envOr("PLATFORM_DOMAIN", "")}`}
                   </td>
                   <td>{s.plan ? planName(s.plan) : "-"}</td>
                   <td className={days !== null && days <= 7 ? "" : "muted"}>

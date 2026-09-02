@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { normalizeHost, parsePlatformSubdomain } from "./lib/tenant";
+import { envOr } from "./lib/env";
 
 /**
  * Host-based routing.
@@ -14,7 +15,7 @@ export function middleware(req: NextRequest) {
   const url = req.nextUrl;
   const rawHost = req.headers.get("host") ?? "";
   const host = normalizeHost(rawHost);
-  const platformDomain = normalizeHost(process.env.PLATFORM_DOMAIN ?? "localhost:3000");
+  const platformDomain = normalizeHost(envOr("PLATFORM_DOMAIN", "localhost:3000"));
 
   if (!host) {
     return new NextResponse("Missing Host header", { status: 400 });

@@ -16,16 +16,17 @@ import pg from "pg";
 import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { env } from "../src/lib/env";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 async function main() {
-  const url = process.env.SUPERUSER_DATABASE_URL ?? process.env.DATABASE_URL;
+  const url = env("SUPERUSER_DATABASE_URL") ?? env("DATABASE_URL");
   if (!url) {
     console.error("Set SUPERUSER_DATABASE_URL (or DATABASE_URL) to a superuser connection.");
     process.exit(1);
   }
-  if (!process.env.SUPERUSER_DATABASE_URL) {
+  if (!env("SUPERUSER_DATABASE_URL")) {
     console.warn(
       "SUPERUSER_DATABASE_URL is not set; using DATABASE_URL. This only works if that role can create roles.",
     );
