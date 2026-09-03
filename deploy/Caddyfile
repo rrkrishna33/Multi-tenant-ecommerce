@@ -21,12 +21,13 @@
 		#
 		# The endpoint approves your own domain, your tenant subdomains, and
 		# any custom domain a shop is actually registered with. Nothing else.
+		#
+		# Caddy 2.8 removed the `interval` and `burst` options -- issuance is
+		# rate-limited internally now, and this endpoint is the only gate. That
+		# raises the stakes on it: if it ever returns 200 for a domain you do
+		# not serve, nothing else stands between a stranger's DNS record and a
+		# certificate request in your name.
 		ask http://127.0.0.1:3000/api/internal/domain-check
-
-		# Cap issuance so a misconfigured or hostile DNS record cannot trigger
-		# unbounded certificate requests.
-		interval 2m
-		burst 5
 	}
 }
 
