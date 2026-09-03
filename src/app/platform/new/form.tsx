@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { createTenantAction, type CreateTenantState } from "../actions";
 import { PLANS, planIds } from "@/lib/subscriptions";
 import { slugify } from "@/lib/provisioning";
@@ -11,6 +11,11 @@ export function NewTenantForm({ platformDomain }: { platformDomain: string }) {
     createTenantAction,
     {},
   );
+
+  // Full navigation, not a router push: see platformLoginAction.
+  useEffect(() => {
+    if (state.to) window.location.assign(state.to);
+  }, [state.to]);
   const [shopName, setShopName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
@@ -26,6 +31,12 @@ export function NewTenantForm({ platformDomain }: { platformDomain: string }) {
     <form action={action}>
       <h2>Add a shop</h2>
       {state.error ? <div className="notice error">{state.error}</div> : null}
+      {state.to ? (
+        <div className="notice ok">
+          Shop created. <a href={state.to}>Open it</a> if this page does not move
+          on its own.
+        </div>
+      ) : null}
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Shop</h3>

@@ -3,6 +3,7 @@ import { getTenantByKey } from "@/lib/tenant-db";
 import { requireShopAccess } from "@/lib/session";
 import { notFound } from "next/navigation";
 import { logoutAction } from "./actions";
+import { SignOutButton } from "@/app/sign-out-button";
 
 export default async function AdminLayout({
   children,
@@ -28,9 +29,7 @@ export default async function AdminLayout({
             <a href="/admin/products">Products</a>
             <a href="/admin/settings">Settings</a>
             <a href="/" target="_blank">View shop</a>
-            <form action={logoutAction}>
-              <button className="btn secondary" type="submit">Sign out</button>
-            </form>
+            <SignOutButton action={logoutAction} to="/login" />
           </nav>
         </div>
       </header>

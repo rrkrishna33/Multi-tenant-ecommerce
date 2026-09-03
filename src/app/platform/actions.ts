@@ -25,7 +25,23 @@ async function guard() {
   return session;
 }
 
-export async function platformLoginAction(_prev: { error?: string }, formData: FormData) {
+export type LoginState = { error?: string; to?: string };
+
+/**
+ * Signing in does NOT redirect() -- it hands the destination back and lets the
+ * client navigate. Same reason as submitOrder: a redirect out of a server
+ * action is followed by the client router, which fetches the destination as a
+ * flight request, and that intermittently renders "page not found" on a page
+ * that loads perfectly on refresh.
+ *
+ * Here it is worse than a nuisance: the session cookie was just set, and a full
+ * navigation is the one thing guaranteed to start the new session cleanly
+ * everywhere rather than leaving a router cache holding pre-login renders.
+ */
+export async function platformLoginAction(
+  _prev: LoginState,
+  formData: FormData,
+): Promise<LoginState> {
   const result = await login(
     String(formData.get("email") ?? ""),
     String(formData.get("password") ?? ""),
@@ -40,15 +56,15 @@ export async function platformLoginAction(_prev: { error?: string }, formData: F
     await logout();
     return { error: "That account cannot access the platform admin." };
   }
-  redirect("/platform");
+  return { to: "/platform" };
 }
 
+/** The caller navigates; see SignOutButton. */
 export async function platformLogoutAction() {
   await logout();
-  redirect("/platform/login");
 }
 
-export type CreateTenantState = { error?: string; field?: string };
+export type CreateTenantState = { error?: string; field?: string; to?: string };
 
 export async function createTenantAction(
   _prev: CreateTenantState,
@@ -80,7 +96,9 @@ export async function createTenantAction(
   }
 
   revalidatePath("/platform");
-  redirect(`/platform?created=${encodeURIComponent(slug)}`);
+  // The client navigates -- see platformLoginAction for why this is not a
+  // redirect(). The shop exists either way by the time this returns.
+  return { to: `/platform?created=${encodeURIComponent(slug)}` };
 }
 
 export async function updateDomainAction(_prev: { error?: string }, formData: FormData) {

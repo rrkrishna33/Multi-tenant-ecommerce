@@ -48,7 +48,13 @@ async function withAuth<T>(fn: (tenantId: string) => Promise<T>): Promise<T> {
   return fn(tenantId);
 }
 
-export async function loginAction(_prev: { error?: string }, formData: FormData) {
+export type LoginState = { error?: string; to?: string };
+
+/** See platformLoginAction: the client navigates, this does not redirect. */
+export async function loginAction(
+  _prev: LoginState,
+  formData: FormData,
+): Promise<LoginState> {
   const tenantId = await currentTenantId();
   const result = await login(
     String(formData.get("email") ?? ""),
@@ -56,12 +62,12 @@ export async function loginAction(_prev: { error?: string }, formData: FormData)
     tenantId,
   );
   if (!result.ok) return { error: result.error };
-  redirect("/admin");
+  return { to: "/admin" };
 }
 
+/** The caller navigates; see SignOutButton. */
 export async function logoutAction() {
   await logout();
-  redirect("/login");
 }
 
 export async function markPaidAction(_prev: { error?: string }, formData: FormData) {

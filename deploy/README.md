@@ -102,6 +102,33 @@ mkdir -p /var/lib/crackers/uploads
 chown -R www-data:www-data /var/lib/crackers/uploads
 ```
 
+### Running it: PM2 or systemd
+
+Either works. Use **one**, not both -- two copies fighting for port 3000 is a
+confusing failure, and the second one dies at startup with `EADDRINUSE`.
+
+**PM2:**
+
+```bash
+npm install -g pm2
+pm2 start npm --name crackers -- start
+pm2 save
+pm2 startup systemd          # then run the command it prints
+pm2 install pm2-logrotate    # or the logs grow without bound
+```
+
+`pm2 save` and `pm2 startup` are what make it survive a reboot. Without both,
+the site is down after the next restart and nothing says why.
+
+Environment comes from `.env`, which Next loads itself -- so the secrets live in
+one place and `pm2 restart crackers` picks up an edit.
+
+Useful afterwards: `pm2 logs crackers`, `pm2 monit`, `pm2 restart crackers`.
+After a `git pull`, always `npm ci && npm run build` **before** restarting; the
+running process serves the old build until it does.
+
+**systemd**, if you would rather not add PM2:
+
 `/etc/systemd/system/crackers.service`:
 
 ```ini

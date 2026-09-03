@@ -1,5 +1,6 @@
 import { requirePlatformAdmin } from "@/lib/session";
 import { platformLogoutAction } from "./actions";
+import { SignOutButton } from "../sign-out-button";
 
 /**
  * Chrome only. Authorisation is enforced in each page, not here: the login
@@ -23,11 +24,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
             <nav style={{ marginLeft: "auto", display: "flex", gap: 16, alignItems: "center" }}>
               <a href="/platform">Shops</a>
               <a href="/platform/new">Add shop</a>
-              <form action={platformLogoutAction}>
-                <button className="btn secondary" type="submit">
-                  Sign out
-                </button>
-              </form>
+              <SignOutButton action={platformLogoutAction} to="/platform/login" />
             </nav>
           ) : null}
         </div>

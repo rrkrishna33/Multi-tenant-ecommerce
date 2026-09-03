@@ -1,13 +1,17 @@
 "use client";
 
-import { useActionState } from "react";
-import { platformLoginAction } from "../actions";
+import { useActionState, useEffect } from "react";
+import { platformLoginAction, type LoginState } from "../actions";
 
 export function PlatformLoginForm() {
-  const [state, action, pending] = useActionState(
-    platformLoginAction,
-    {} as { error?: string },
-  );
+  const [state, action, pending] = useActionState<LoginState, FormData>(platformLoginAction, {});
+
+  // A full navigation rather than a router push: the session cookie was just
+  // set, so this starts the signed-in session cleanly instead of leaving the
+  // client router holding pre-login renders.
+  useEffect(() => {
+    if (state?.to) window.location.assign(state.to);
+  }, [state?.to]);
 
   return (
     <form action={action} className="card">
@@ -26,9 +30,19 @@ export function PlatformLoginForm() {
           autoComplete="current-password"
         />
       </div>
-      <button className="btn" type="submit" disabled={pending}>
-        {pending ? "Signing in..." : "Sign in"}
+      <button className="btn" type="submit" disabled={pending || Boolean(state?.to)}>
+        {pending ? "Signing in..." : state?.to ? "Signing you in..." : "Sign in"}
       </button>
+
+      {/* Rendered by the action's own response, so sign-in still completes if
+          the navigation above never runs -- with JavaScript off, this link is
+          the whole flow. */}
+      {state?.to ? (
+        <p className="muted" style={{ marginTop: 10 }}>
+          Signed in. <a href={state.to}>Continue</a> if this page does not move on
+          its own.
+        </p>
+      ) : null}
     </form>
   );
 }
