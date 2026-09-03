@@ -7,6 +7,7 @@ import { isServable } from "@/lib/tenant";
 import { getDb } from "@/db";
 import { tenants } from "@/db/schema";
 import { NoticeModal } from "./notice-modal";
+import { ContactButtons } from "./contact-buttons";
 
 type Props = {
   children: React.ReactNode;
@@ -45,13 +46,24 @@ export default async function TenantLayout({ children, params }: Props) {
   }
 
   const theme = shop.themeConfig ?? {};
-  // Customer-facing pages only. The owner sees the notice in the settings
-  // preview; having it pop up over the admin as well would be a nuisance.
   const path = (await headers()).get("x-shop-path") ?? "/";
+
   const customerFacing = !path.startsWith("/admin") && !path.startsWith("/login");
+  // An estimate is a document, and it is read by the shop as often as by the
+  // customer -- from the admin's "view estimate", where the shop's own notice
+  // to customers is pure noise. The notice belongs on the way IN to a shop, not
+  // over an order that has already been placed.
+  const storefront = customerFacing && !path.startsWith("/order");
+
   const about = theme.about;
   const hasAbout = Boolean(about?.headline || about?.intro || about?.mission || about?.vision);
-  const noticeOn = Boolean(theme.announcementOn && theme.announcement && customerFacing);
+
+  const hasNotice = Boolean(theme.announcementOn && theme.announcement);
+  // The popup interrupts, so it is limited to the storefront's front page --
+  // the moment someone arrives. The strip is passive enough to sit on any
+  // shopping page.
+  const showPopup = hasNotice && storefront && path === "/" && theme.announcementDisplay !== "banner";
+  const showBanner = hasNotice && storefront && theme.announcementDisplay === "banner";
 
   return (
     <>
@@ -97,14 +109,14 @@ export default async function TenantLayout({ children, params }: Props) {
           </div>
         </div>
       </header>
-      {noticeOn && theme.announcementDisplay !== "banner" ? (
+      {showPopup ? (
         <NoticeModal
           message={theme.announcement!}
           tone={theme.announcementTone ?? "info"}
           shopName={shop.shopName}
         />
       ) : null}
-      {noticeOn && theme.announcementDisplay === "banner" ? (
+      {showBanner ? (
         <div
           className={`announce no-print ${toneClass(theme.announcementTone)}`}
           role="status"
@@ -113,6 +125,12 @@ export default async function TenantLayout({ children, params }: Props) {
         </div>
       ) : null}
       {children}
+
+      {/* Customer-facing only: the shop does not need a button to phone
+          itself while working in its own admin. */}
+      {customerFacing ? (
+        <ContactButtons phone={shop.phone} whatsapp={shop.whatsapp} />
+      ) : null}
       <footer className="wrap no-print" style={{ padding: "32px 16px", fontSize: 13 }}>
         <p className="muted">
           {shop.shopName}
