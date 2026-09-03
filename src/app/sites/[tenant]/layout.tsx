@@ -7,7 +7,7 @@ import { isServable } from "@/lib/tenant";
 import { getDb } from "@/db";
 import { tenants } from "@/db/schema";
 import { NoticeModal } from "./notice-modal";
-import { ContactButtons } from "./contact-buttons";
+import { PhoneIcon, WhatsAppIcon, whatsappHref } from "./contact-icons";
 
 type Props = {
   children: React.ReactNode;
@@ -95,13 +95,21 @@ export default async function TenantLayout({ children, params }: Props) {
             ) : null}
             {shop.phone ? (
               <div>
-                Call <a href={`tel:${shop.phone}`}>{shop.phone}</a>
+                <a href={`tel:${shop.phone}`} aria-label={`Call ${shop.phone}`}>
+                  <PhoneIcon />
+                  {shop.phone}
+                </a>
               </div>
             ) : null}
             {shop.whatsapp ? (
               <div>
-                WhatsApp{" "}
-                <a href={`https://wa.me/91${shop.whatsapp.replace(/\D/g, "").slice(-10)}`}>
+                <a
+                  href={whatsappHref(shop.whatsapp)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`WhatsApp ${shop.whatsapp}`}
+                >
+                  <WhatsAppIcon />
                   {shop.whatsapp}
                 </a>
               </div>
@@ -126,11 +134,6 @@ export default async function TenantLayout({ children, params }: Props) {
       ) : null}
       {children}
 
-      {/* Customer-facing only: the shop does not need a button to phone
-          itself while working in its own admin. */}
-      {customerFacing ? (
-        <ContactButtons phone={shop.phone} whatsapp={shop.whatsapp} />
-      ) : null}
       <footer className="wrap no-print" style={{ padding: "32px 16px", fontSize: 13 }}>
         <p className="muted">
           {shop.shopName}
